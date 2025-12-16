@@ -107,3 +107,53 @@ class InitiatePaymentAPIView(APIView):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+            
+
+# verify payment with Chapa after a user completes payment
+class VerifyPaymentAPIView(APIView):
+    
+    def get(self, request, tx_ref):
+        try:
+            payment = Payment.objects.get(booking_reference=tx_ref)
+            
+            headers = {
+                "Authorization": f"Bearer {CHAPA_SECRET_KEY}"
+            }
+            
+            # Chapa verify url
+            verify_url = f"https://api.chapa.co/v1/transaction/verify/{tx_ref}"
+            
+            # send request to verify payment
+            response = request.get(verify_url, headers=headers)
+            data = response.json()
+            
+            if response.status_code != 200:
+                payment.status = "failed"
+                payment.save()
+                
+                return Response(data, status.HTTP_400_BAD_REQUEST)
+            
+            # Get payment status from Chapa to update the status on the payment instance
+            payment_status = data.get("data", {}).get("status")
+            
+            if payment_status == "success":
+                payment.status = "completed"
+            
+            else:
+                payment.status = "failed"
+                
+            payment.save()
+            
+            return Response(
+                {
+                    "message": "Payment verified successfully",
+                    "status": payment.status
+                },
+                status=status.HTTP_200_OK
+            )
+        
+        except Payment.DoesNotExist:
+            return Response(
+                {"error": "Payment not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
