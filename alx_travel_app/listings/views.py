@@ -6,6 +6,7 @@ from .models import Listing, Booking, Payment
 from .serializers import ListingSerializer, BookingSerializer, PaymentSerializer
 from drf_yasg.utils import swagger_auto_schema
 from decouple import config
+from .tasks import send_payment_confirmation_email
 
 
 class ListingViewSet(viewsets.ModelViewSet):
@@ -138,6 +139,9 @@ class VerifyPaymentAPIView(APIView):
             
             if payment_status == "success":
                 payment.status = "completed"
+                send_payment_confirmation_email(
+                    payment.user.email, payment.booking_reference
+                )
             
             else:
                 payment.status = "failed"
