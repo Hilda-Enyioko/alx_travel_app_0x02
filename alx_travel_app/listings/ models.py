@@ -42,3 +42,21 @@ class Review(models.Model):
 
     def __str__(self):
         return f"Review for {self.listing.title} ({self.rating}/5)"
+
+
+class Payment(models.Model):
+    PAYMENT_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed')
+    ]
+    
+    booking_reference = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name="payments")
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_status = models.CharField(max_length=10, choices=PAYMENT_STATUS_CHOICES)
+    transaction_id = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Payment {self.transaction_id} made for {self.booking_reference}"
